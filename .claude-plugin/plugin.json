@@ -1,0 +1,12 @@
+{
+    "name": "vsco-mcp",
+    "displayName": "VSCO Workspace MCP",
+    "version": "0.2.0",
+    "description": "Connect Claude to VSCO's MCP service, initially VSCO Workspace, to access the tools available to your authorized account. Requires a VSCO One subscription.",
+    "author": { "name": "VSCO", "url": "https://vsco.co" },
+    "homepage": "https://vsco.co",
+    "keywords": ["photo", "photographer", "photography", "crm", "vsco", "invoice", "leads", "workflow", "payments"],
+    "icon": "./icon.png",
+    "privacyPolicyUrl": "https://www.vsco.co/about/privacy-policy",
+    "termsOfServiceUrl": "https://www.vsco.co/about/terms-of-use"
+}
