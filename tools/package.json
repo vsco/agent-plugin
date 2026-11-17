@@ -1,8 +1,0 @@
-{
-    "name": "agent-plugin-tools",
-    "private": true,
-    "type": "module",
-    "dependencies": {
-        "fflate": "^0.8.2"
-    }
-}
