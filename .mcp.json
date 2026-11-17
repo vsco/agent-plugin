@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+        "vsco": {
+            "type": "http",
+            "url": "https://mcp.vsco.co/mcp"
+        }
+    }
+}
