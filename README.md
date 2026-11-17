@@ -19,4 +19,4 @@ The `version` in `plugin.json` and `.claude-plugin/plugin.json` must match.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+VSCO Agent Plugin Limited Use License, see [LICENSE](LICENSE).
