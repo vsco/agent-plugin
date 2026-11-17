@@ -1,21 +1,28 @@
-MIT License
+VSCO Agent Plugin Limited Use License
+Copyright © 2026 VSCO
 
-Copyright (c) 2026 VSCO
+Subject to this license, VSCO grants you a limited, non-exclusive, non-transferable,
+and non-sublicensable license to download, copy only as technically necessary, install,
+configure, and use this software and associated documentation files (the “Software”)
+solely to connect an authorized VSCO Workspace account to Claude for your internal
+business purposes. You may not modify, create derivative works from, publish, distribute,
+sublicense, sell, rent, commercially exploit, or otherwise make the Software available
+to any third party. You may not remove or alter any copyright, attribution, or proprietary
+notice.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+GitHub may host, reproduce, review, scan, test, and make the Software available solely
+as necessary to support the applicable GitHub repository and applicable listing, subject
+to their respective agreements with VSCO.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+VSCO retains all rights, title, and interest in the Software. This License terminates
+automatically upon breach, at which time you must stop using and delete all copies of
+the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. TO THE MAXIMUM EXTENT
+PERMITTED BY LAW, IN NO EVENT SHALL VSCO OR ITS LICENSORS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE. BY DOWNLOADING, INSTALLING, OR USING
+THE SOFTWARE, YOU AGREE TO THIS LICENSE.
