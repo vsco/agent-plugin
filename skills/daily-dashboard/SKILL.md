@@ -1,15 +1,17 @@
 ---
 name: daily-dashboard
-description: Build or refresh a VSCO Workspace daily dashboard (tasks, invoices, quotes, email errors, unread email, bookings, leads, calendar) as a published artifact. Use when asked for a daily dashboard, morning overview, or "what needs my attention today" from VSCO.
+description: Build or refresh a VSCO Workspace daily dashboard (tasks, invoices, quotes, email errors, unread email, bookings, leads, calendar) as a Claude artifact, or as a chat summary on hosts without artifacts. Use when asked for a daily dashboard, morning overview, or "what needs my attention today" from VSCO.
 ---
 
 # VSCO daily dashboard
 
-Publishes a ready-made dashboard page from `assets/dashboard-template.html`. The page loads its own data: the viewer presses refresh, allows the connector once, and the page calls the VSCO connector's read-only `get_attention_summary` tool. Never embed real account data in the published page; it opens on a welcome screen by design.
+On hosts that cannot publish Claude artifacts with connector access (for example ChatGPT or Codex), skip the page entirely: call `get_attention_summary` with no arguments and answer in chat. Lead with what is due today and overdue, then money owed, email problems and unread client email, then leads to follow up. Link each item with its `jobHref`, and mention any sections listed under `errors`.
 
-The page calls `get_attention_summary` with `from` set to the first of the current month and `days` set to the month's length, so the calendar covers the current month. `adapt()` in the template maps the tool's result onto the shape the render functions use. To answer in chat instead of publishing a page, call `get_attention_summary` directly; its default 14-day window fits a chat answer.
+On Claude, this skill publishes a ready-made dashboard page from `assets/dashboard-template.html`. The page loads its own data: the viewer presses refresh, allows the connector once, and the page calls the VSCO connector's read-only `get_attention_summary` tool. Never embed real account data in the published page; it opens on a welcome screen by design.
 
-## Steps
+The page calls `get_attention_summary` with `from` set to the first of the current month and `days` set to the month's length, so the calendar covers the current month. `adapt()` in the template maps the tool's result onto the shape the render functions use. If a Claude user asks for a quick answer rather than a dashboard, answer in chat as above.
+
+## Steps (Claude artifacts)
 
 1. Test the tool first. Call `get_attention_summary` once with no arguments. If the connector has no such tool, it is out of date; stop and tell the user. If the result has an `errors` list, mention which sections failed.
 2. Copy the template to a working file. Do not edit the original.
