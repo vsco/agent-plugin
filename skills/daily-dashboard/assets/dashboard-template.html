@@ -369,213 +369,43 @@
 (function () {
   "use strict";
   var SERVER = "VSCO MCP";
-  var W = "https://workspace.vsco.co";
   var D = null;
-  var pullFn = async () => {
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const get = async (op, input) => {
-    for (let a = 0; a < 4; a++) {
-      try { return await workspace[op](input || {}); }
-      catch (e) {
-        const m = String((e && e.message) || e);
-        if (!/429|rate|too many/i.test(m)) return { items: [], err: m.slice(0, 150) };
-        await sleep(5000);
-      }
-    }
-    return { items: [], err: "rate limited" };
-  };
-  const all = async (op, q, max) => {
-    const page = (n) => get(op, { query: Object.assign({}, q, { page: n, pageSize: 100 }) });
-    const f = await page(1);
-    let it = f.items || [];
-    const tp = Math.min((f.meta && f.meta.totalPages) || 1, max || 20);
-    if (tp > 1) {
-      const rest = await Promise.all(Array.from({ length: tp - 1 }, (_, i) => page(i + 2)));
-      rest.forEach((r) => { it = it.concat(r.items || []); });
-    }
-    return it;
-  };
-  const me = await get("getResourceMyStudio");
-  let TZ = "UTC";
-  if (me && me.timezoneId) { const z = await get("getResourceTimezone", { id: me.timezoneId }); if (z && z.name) TZ = z.name; }
-  let dFmt, tFmt;
-  const mkFmt = (z) => {
-    dFmt = new Intl.DateTimeFormat("en-CA", { timeZone: z, year: "numeric", month: "2-digit", day: "2-digit" });
-    tFmt = new Intl.DateTimeFormat("en-GB", { timeZone: z, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  };
-  try { mkFmt(TZ); } catch (e) { TZ = "UTC"; mkFmt(TZ); }
-  const studio = { name: (me && me.name) || "", currency: (me && me.currencyCode) || "USD", tz: TZ, weekStartsOn: me && me.weekStartsOn === "Sunday" ? "Sunday" : "Monday" };
-  const parts = (iso) => { const o = {}; tFmt.formatToParts(new Date(iso)).forEach((p) => { o[p.type] = p.value; }); return { d: o.year + "-" + o.month + "-" + o.day, t: o.hour + ":" + o.minute }; };
-  const pad = (n) => (n < 10 ? "0" : "") + n;
-  const today = dFmt.format(new Date());
-  const ty = +today.slice(0, 4), tm = +today.slice(5, 7);
-  const monthStart = ty + "-" + pad(tm) + "-01";
-  const n1 = tm === 12 ? { y: ty + 1, m: 1 } : { y: ty, m: tm + 1 };
-  const nextStart = n1.y + "-" + pad(n1.m) + "-01";
-  const n2 = n1.m === 12 ? { y: n1.y + 1, m: 1 } : { y: n1.y, m: n1.m + 1 };
-  const calEnd = new Date(Date.UTC(n2.y, n2.m - 1, 0)).toISOString().slice(0, 10);
-  const addDays = (iso, n) => new Date(Date.parse(iso + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);
-  const ENT = { ntilde: "\u00f1", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", eacute: "\u00e9", egrave: "\u00e8", aacute: "\u00e1", oacute: "\u00f3", uacute: "\u00fa", iacute: "\u00ed", uuml: "\u00fc", ouml: "\u00f6", auml: "\u00e4", ccedil: "\u00e7", nbsp: " " };
-  const dec = (s) => String(s).replace(/&#(\d+);|&([a-z]+);/gi, (m, n, k) => n ? String.fromCharCode(+n) : (ENT[k] !== undefined ? ENT[k] : m));
-  const short = (t) => t ? dec(t).replace(/^[\u{1F300}-\u{1FAFF}☀-➿\s]+/u, "").replace(/ on (Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, .*$/, "") : "";
-  const num = (h) => h ? String(h).split("/").pop() : "";
-  const d10 = (s) => (s || "").slice(0, 10);
+  var CACHE_KEY = "ddash.data.v2";
 
-  const jobs = await all("listResourceJob", { stage: ["lead", "booked", "fulfillment"] });
-  const href = jobs.map((j) => j.links && j.links.self && j.links.self.managerHref).find(Boolean);
-  if (href) studio.app = String(href).match(/^https?:\/\/[^/]+/)[0];
-  const jm = {}; jobs.forEach((j) => { jm[j.id] = j; });
-  const jobNum = (j) => num(j && j.links && j.links.self && j.links.self.managerHref);
-  const titleCache = {};
-  const titleOf = async (id) => {
-    if (jm[id]) return short(jm[id].title);
-    if (titleCache[id] === undefined) { const j = await get("getResourceJob", { id }); titleCache[id] = short(j.title) || "(other job)"; }
-    return titleCache[id];
-  };
-  const idCache = {};
-  const idOf = async (id) => {
-    if (jm[id]) return jobNum(jm[id]);
-    if (idCache[id] === undefined) { const j = await get("getResourceJob", { id }); idCache[id] = jobNum(j); }
-    return idCache[id];
-  };
-
-  // ---- tasks
-  const tasksRaw = await all("listResourceTask", { completed: false });
-  const lists = await all("listResourceTaskList", {});
-  const lm = {}; lists.forEach((l) => { lm[l.id] = l; });
-  const isActive = (t) => { const j = jm[t.jobId], l = lm[t.taskListId]; return !!(j && l && l.stage === j.stage); };
-  const tasksAll = tasksRaw.filter(isActive);
-  const otherStage = tasksRaw.filter((t) => jm[t.jobId] && !isActive(t)).length;
-  const dated = tasksAll.filter((t) => t.dueDate);
-  const dueToday = dated.filter((t) => t.dueDate === today);
-  const overdue = dated.filter((t) => t.dueDate < today);
-  const olderOverdue = overdue.filter((t) => t.dueDate < monthStart).length;
-  const todayNames = []; dueToday.forEach((t) => { if (todayNames.indexOf(t.name) < 0) todayNames.push(t.name); });
-  const tg = {}, trows = [];
-  const calTasks = dated.filter((t) => t.dueDate >= monthStart && t.dueDate <= calEnd);
-  for (const t of calTasks) {
-    const title = await titleOf(t.jobId);
-    const k = t.dueDate + "|" + t.name + "|" + title;
-    if (!tg[k]) { tg[k] = [t.dueDate, t.name, title, num(t.links && t.links.jobId && t.links.jobId.managerHref), 0]; trows.push(tg[k]); }
-    tg[k][4]++;
+  function windowStart() {
+    var tz = (D && D.studio && D.studio.tz) || undefined, today;
+    try { today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date()); } catch (e) { today = new Date().toISOString().slice(0, 10); }
+    return today.slice(0, 7) + "-01";
   }
-  trows.sort((a, b) => a[0].localeCompare(b[0]));
-
-  // ---- invoices
-  const inv = await all("listResourceInvoice", { status: ["open"] });
-  const past = inv.filter((i) => i.dueDate && i.dueDate < today);
-  const soon = inv.filter((i) => i.dueDate && i.dueDate >= today);
-  const ib = {};
-  for (const i of past) {
-    const k = i.jobId;
-    if (!ib[k]) ib[k] = { t: await titleOf(i.jobId), id: num(i.links && i.links.jobId && i.links.jobId.managerHref) || await idOf(i.jobId), n: 0, bal: 0, oldest: i.dueDate };
-    ib[k].n++; ib[k].bal += i.balance || 0; if (i.dueDate < ib[k].oldest) ib[k].oldest = i.dueDate;
+  function nextMonth(ym) { var y = +ym.slice(0, 4), m = +ym.slice(5, 7); return m === 12 ? (y + 1) + "-01" : y + "-" + (m < 9 ? "0" : "") + (m + 1); }
+  function c(d) { return Math.round((d || 0) * 100); }
+  function adapt(s) {
+    var t = s.tasks, iv = s.invoices, q = s.quotes, m = s.mail, b = s.booked, l = s.leads;
+    var names = []; t.dueToday.items.forEach(function (x) { if (names.indexOf(x.name) < 0) names.push(x.name); });
+    var lead = function (r) { return { t: r.jobTitle, id: r.jobHref, status: r.status || "", inq: r.inquiryDate || "", next: r.nextInteractionDate || "", prev: r.previousInteractionDate || "", ev: r.eventDate || "", rev: c(r.totalRevenue), c: 1 }; };
+    var invJob = function (j) { return { t: j.jobTitle, id: j.jobHref, n: j.count, bal: c(j.balance), oldest: j.oldestDueDate, due: j.nextDueDate }; };
+    return {
+      studio: { name: s.studio.name, currency: s.studio.currency, tz: s.studio.timezone, weekStartsOn: s.studio.weekStartsOn },
+      asOf: s.asOf, today: s.today, cal: { m0: s.today.slice(0, 7), m1: nextMonth(s.today.slice(0, 7)) }, errors: s.errors || [],
+      tasks: { dueToday: t.dueToday.count, todayNames: names.slice(0, 3), overdue: t.overdue.count, older: t.overdue.beforeThisMonth, noDue: t.noDueDate, other: t.otherStage, hidden: t.inWindow.count - t.inWindow.items.length,
+        rows: t.inWindow.items.map(function (r) { return [r.dueDate, r.name, r.jobTitle, r.jobHref, r.count]; }) },
+      inv: { overdue: { n: iv.pastDue.count, total: c(iv.pastDue.total), jobsTotal: iv.pastDue.jobCount, oldest: iv.pastDue.oldestDueDate || "", jobs: iv.pastDue.jobs.map(invJob) },
+        soon: { n: iv.upcoming.count, total: c(iv.upcoming.total), jobsTotal: iv.upcoming.jobCount, jobs: iv.upcoming.jobs.map(invJob),
+          next: iv.upcoming.next ? { date: iv.upcoming.next.dueDate, bal: c(iv.upcoming.next.balance), t: iv.upcoming.next.jobTitle, id: iv.upcoming.next.jobHref } : null } },
+      quotes: { nTotal: q.count, placeholders: q.unpriced, outMonth: { n: q.thisMonth.count, total: c(q.thisMonth.total) }, before: { n: q.count - q.thisMonth.count, total: c(q.total) - c(q.thisMonth.total) },
+        rows: q.items.map(function (r) { return { name: r.name, total: c(r.total), t: r.jobTitle, id: r.jobHref, created: r.created, sent: r.lastSent || "", viewed: r.lastViewed || "", exp: r.expires || "" }; }) },
+      mail: { drafts: m.drafts, bounces: m.bounced.count, queued: m.queued.count, unread: m.unread,
+        bounceJobs: m.bounced.jobs.map(function (j) { return { t: j.jobTitle, id: j.jobHref, n: j.count, first: j.first || "", last: j.last || "" }; }),
+        queuedList: m.queued.jobs.map(function (j) { return { t: j.jobTitle, id: j.jobHref, n: j.count }; }) },
+      booked: { total: b.count, fulfil: b.inFulfillment, upcomingN: b.upcoming.count, noDate: b.noEventDate.count, past: b.pastEventDate,
+        upcoming: b.upcoming.items.map(function (j) { return { t: j.jobTitle, n: j.jobHref, ev: j.eventDate, bal: c(j.balance) }; }),
+        noDateOwing: b.noEventDate.owing.map(function (j) { return { t: j.jobTitle, bal: c(j.balance) }; }),
+        attn: b.mostOverdueTasks ? { t: b.mostOverdueTasks.jobTitle, id: b.mostOverdueTasks.jobHref, ev: b.mostOverdueTasks.eventDate || "", n: b.mostOverdueTasks.count, names: b.mostOverdueTasks.names } : null },
+      leads: { total: l.count, fresh: { n: l.fresh.count, rows: l.fresh.items.map(lead) }, overdue: { n: l.followUpOverdue.count, rows: l.followUpOverdue.items.map(lead) },
+        consult: { n: l.consult.count, rows: l.consult.items.map(lead) }, follow: { n: l.followUp.count, rows: l.followUp.items.map(lead) }, quiet: { n: l.quiet } },
+      events: { hidden: s.events.count - s.events.items.length, groups: s.events.items }
+    };
   }
-  const ibList = Object.keys(ib).map((k) => ib[k]).sort((a, b) => b.bal - a.bal);
-  soon.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const sb = {};
-  for (const i of soon) {
-    const k = i.jobId;
-    if (!sb[k]) sb[k] = { t: await titleOf(i.jobId), id: num(i.links && i.links.jobId && i.links.jobId.managerHref) || await idOf(i.jobId), n: 0, bal: 0, due: i.dueDate };
-    sb[k].n++; sb[k].bal += i.balance || 0; if (i.dueDate < sb[k].due) sb[k].due = i.dueDate;
-  }
-  const sbList = Object.keys(sb).map((k) => sb[k]).sort((a, b) => a.due.localeCompare(b.due) || b.bal - a.bal);
-  const soonNext = soon.length ? { date: soon[0].dueDate, bal: soon[0].balance || 0, t: await titleOf(soon[0].jobId), id: num(soon[0].links && soon[0].links.jobId && soon[0].links.jobId.managerHref) || await idOf(soon[0].jobId) } : null;
-
-  // ---- quotes
-  const quotesAll = await all("listResourceQuote", {}, 10);
-  const qrows = [];
-  quotesAll.forEach((q) => {
-    if (q.status !== "open" || !jm[q.jobId]) return;
-    const r = (q.recipients && q.recipients[0]) || {};
-    qrows.push({ name: q.name || "Untitled quote", total: (q.options && q.options[0] && q.options[0].total) || 0, t: short(jm[q.jobId].title), id: jobNum(jm[q.jobId]),
-      created: d10(q.created), sent: d10(r.lastSent), viewed: d10(r.lastViewed), exp: q.expiration && q.expiration.date ? q.expiration.date : "" });
-  });
-  const qpos = qrows.filter((q) => q.total > 0).sort((a, b) => b.total - a.total);
-  const qthis = qpos.filter((q) => q.created >= monthStart || q.sent >= monthStart);
-  const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
-
-  // ---- mail
-  const rank = { booked: 0, fulfillment: 1, lead: 2 };
-  const mailJobs = jobs.slice().sort((a, b) => (rank[a.stage] || 0) - (rank[b.stage] || 0)).slice(0, 80);
-  const mail = { jobs: mailJobs.length, of: jobs.length, errs: 0, drafts: 0, bounces: 0, queued: 0, bounceJobs: [], queuedList: [] };
-  const bj = {};
-  for (let i = 0; i < mailJobs.length; i += 6) {
-    const chunk = mailJobs.slice(i, i + 6);
-    const rs = await Promise.all(chunk.map((j) => get("listResourceMailMessage", { query: { jobId: j.id, pageSize: 100 } })));
-    rs.forEach((r, k) => {
-      const j = chunk[k];
-      if (r.err) { mail.errs++; return; }
-      (r.items || []).forEach((m) => {
-        if (m.sendStatus === "Draft" && m.kind === "Outgoing") mail.drafts++;
-        if (m.sendStatus === "Queued") { mail.queued++; mail.queuedList.push({ t: short(j.title), id: jobNum(j) }); }
-        if (m.bouncedAt || /delivery status notification|undeliverable|returned mail/i.test(m.subject || "")) {
-          mail.bounces++;
-          const w = d10(m.when);
-          if (!bj[j.id]) bj[j.id] = { t: short(j.title), id: jobNum(j), n: 0, first: w, last: w };
-          bj[j.id].n++; if (w && w < bj[j.id].first) bj[j.id].first = w; if (w && w > bj[j.id].last) bj[j.id].last = w;
-        }
-      });
-    });
-    await sleep(700);
-  }
-  mail.bounceJobs = Object.keys(bj).map((k) => bj[k]).sort((a, b) => b.n - a.n);
-
-  // ---- events (studio timezone)
-  const evs = await all("listResourceEvent", { occursFrom: monthStart, occursTo: calEnd });
-  const mk0 = monthStart.slice(0, 7), mk1 = nextStart.slice(0, 7);
-  const groups = {};
-  evs.forEach((e) => {
-    let sd, st, ed, et;
-    if (e.allDay) { sd = e.startDate; ed = e.endDate; st = ""; et = ""; }
-    else { const s = parts(e.startUtc), en = parts(e.endUtc); sd = s.d; st = s.t; ed = en.d; et = en.t; }
-    const mi = sd.slice(0, 7) === mk0 ? 0 : (sd.slice(0, 7) === mk1 ? 1 : -1);
-    if (mi < 0) return;
-    const day = +sd.slice(8, 10);
-    const jid = num(e.links && e.links.jobId && e.links.jobId.managerHref);
-    const key = [e.readOnly ? "f" : "w", String(e.name || "").replace(/~~/g, "~"), st, et, e.allDay ? 1 : 0, jid, ed !== sd ? ed : ""].join("~~");
-    if (!groups[key]) groups[key] = { 0: [], 1: [] };
-    groups[key][mi].push(day);
-  });
-  const erows = Object.keys(groups).sort().map((k) => k + "~~" + groups[k][0].sort((a, b) => a - b).join(",") + "~~" + groups[k][1].sort((a, b) => a - b).join(","));
-
-  // ---- booked
-  const bookedJobs = jobs.filter((j) => j.stage === "booked").map((j) => ({ id: j.id, t: short(j.title), n: jobNum(j), ev: d10(j.eventDate), bal: j.accountBalance || 0 }));
-  const upcoming = bookedJobs.filter((j) => j.ev && j.ev >= today).sort((a, b) => a.ev.localeCompare(b.ev));
-  const noDate = bookedJobs.filter((j) => !j.ev);
-  const overdueByJob = {};
-  overdue.filter((t) => t.dueDate >= monthStart).forEach((t) => { (overdueByJob[t.jobId] = overdueByJob[t.jobId] || []).push(t); });
-  let attn = null;
-  bookedJobs.forEach((j) => {
-    const l = overdueByJob[j.id];
-    if (l && (!attn || l.length > attn.n)) attn = { t: j.t, id: j.n, ev: j.ev, n: l.length, names: l.sort((a, b) => b.dueDate.localeCompare(a.dueDate)).slice(0, 2).map((t) => t.name) };
-  });
-
-  // ---- leads
-  const leadsAll = jobs.filter((j) => j.stage === "lead").map((j) => ({ t: short(j.title), id: jobNum(j), status: j.leadStatusName || "", inq: d10(j.inquiryDate), next: d10(j.nextInteractionDate), prev: d10(j.previousInteractionDate), ev: d10(j.eventDate), rev: j.totalRevenue || 0 }));
-  const freshFrom = addDays(today, -2);
-  const tiers = { fresh: [], overdue: [], consult: [], follow: [], quiet: [] };
-  leadsAll.forEach((l) => {
-    if (l.inq >= freshFrom) tiers.fresh.push(l);
-    else if (l.next && l.next < today) tiers.overdue.push(l);
-    else if (/consult/i.test(l.status)) tiers.consult.push(l);
-    else if (/follow/i.test(l.status)) tiers.follow.push(l);
-    else tiers.quiet.push(l);
-  });
-  const lg = (arr, limit) => { const g = {}, o = []; arr.forEach((l) => { const k = l.t + "|" + l.ev + "|" + l.status; if (!g[k]) { g[k] = Object.assign({ c: 0 }, l); o.push(g[k]); } g[k].c++; }); return o.slice(0, limit); };
-  tiers.fresh.sort((a, b) => b.inq.localeCompare(a.inq)); tiers.overdue.sort((a, b) => a.next.localeCompare(b.next)); tiers.consult.sort((a, b) => b.prev.localeCompare(a.prev));
-
-  return {
-    v: 1, studio: studio, asOf: new Date().toISOString(), today: today, cal: { m0: mk0, m1: mk1 },
-    tasks: { dueToday: dueToday.length, todayNames: todayNames.slice(0, 3), overdue: overdue.length, older: olderOverdue, noDue: tasksAll.length - dated.length, other: otherStage, rows: trows },
-    inv: { overdue: { n: past.length, total: sum(past, (i) => i.balance || 0), jobsTotal: ibList.length, oldest: past.length ? past.map((i) => i.dueDate).sort()[0] : "", jobs: ibList.slice(0, 5) }, soon: { n: soon.length, total: sum(soon, (i) => i.balance || 0), jobsTotal: sbList.length, jobs: sbList.slice(0, 5), next: soonNext } },
-    quotes: { nTotal: qpos.length, rows: qpos.slice(0, 5), outMonth: { n: qthis.length, total: sum(qthis, (q) => q.total) }, before: { n: qpos.length - qthis.length, total: sum(qpos, (q) => q.total) - sum(qthis, (q) => q.total) }, placeholders: qrows.length - qpos.length },
-    mail: mail,
-    booked: { total: bookedJobs.length, fulfil: jobs.filter((j) => j.stage === "fulfillment").length, upcoming: upcoming.slice(0, 3), upcomingN: upcoming.length, noDate: noDate.length, noDateOwing: noDate.filter((j) => j.bal > 0).sort((a, b) => b.bal - a.bal).slice(0, 2).map((j) => ({ t: j.t, bal: j.bal })), past: bookedJobs.filter((j) => j.ev && j.ev < today).length, attn: attn },
-    leads: { total: leadsAll.length, fresh: { n: tiers.fresh.length, rows: lg(tiers.fresh, 3) }, overdue: { n: tiers.overdue.length, rows: lg(tiers.overdue, 3) }, consult: { n: tiers.consult.length, rows: lg(tiers.consult, 4) }, follow: { n: tiers.follow.length, rows: lg(tiers.follow, 2) }, quiet: { n: tiers.quiet.length } },
-    events: { rows: erows }
-  };
-};
 
   var DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -596,7 +426,7 @@
   function dayLabel(iso) { return DOW[dow(iso)].slice(0, 3) + " " + (+iso.slice(8, 10)) + " " + MON[+iso.slice(5, 7) - 1]; }
   function longDay(iso) { return DOW[dow(iso)] + " " + (+iso.slice(8, 10)) + " " + MON[+iso.slice(5, 7) - 1]; }
   function shortDate(iso) { return (+iso.slice(8, 10)) + " " + MON[+iso.slice(5, 7) - 1]; }
-  function jobHref(id) { return id ? W + "/jobs/view/" + id : null; }
+  function jobHref(href) { return href || null; }
 
   function initials(str) {
     var w = String(str || "").replace(/[^A-Za-z0-9\u00C0-\u024F ]/g, " ").trim().split(/\s+/).filter(Boolean);
@@ -624,15 +454,10 @@
   /* ---------- Events ---------- */
   function parseEvents() {
     EVENTS = []; EV_BY = {};
-    var mk = [D.cal.m0, D.cal.m1];
-    D.events.rows.forEach(function (r) {
-      var a = r.split("~~"), kind = a[0] === "w" ? "ws" : "feed";
-      [0, 1].forEach(function (mi) {
-        var f = a[7 + mi]; if (!f) return;
-        f.split(",").forEach(function (d) {
-          var e = { k: kind, name: a[1], st: a[2], et: a[3], ad: a[4] === "1", job: a[5], end: a[6], date: mk[mi] + "-" + pad(+d) };
-          EVENTS.push(e); (EV_BY[e.date] = EV_BY[e.date] || []).push(e);
-        });
+    D.events.groups.forEach(function (g) {
+      g.dates.forEach(function (date) {
+        var e = { k: g.source === "calendarFeed" ? "feed" : "ws", name: g.name, st: g.startTime || "", et: g.endTime || "", ad: g.allDay, job: g.jobHref || "", end: g.endDate || "", date: date };
+        EVENTS.push(e); (EV_BY[e.date] = EV_BY[e.date] || []).push(e);
       });
     });
   }
@@ -713,10 +538,15 @@
     var mb = m.bounceJobs.map(function (b) {
       return row({ t: "Delivery failure notices", av: b.t, s: b.t + " · " + shortDate(b.first) + (b.last !== b.first ? " → " + shortDate(b.last) : ""), pill: b.n + (b.n === 1 ? " bounce" : " bounces"), pc: "red", href: jobHref(b.id) });
     }).join("") + m.queuedList.map(function (x) {
-      return row({ t: "Outgoing message stuck in Queued", av: x.t, s: x.t, pill: "Check", pc: "amber", href: jobHref(x.id) });
+      return row({ t: "Outgoing message stuck in Queued", av: x.t, s: x.t, pill: x.n > 1 ? x.n + " queued" : "Check", pc: "amber", href: jobHref(x.id) });
     }).join("");
     if (!mb) mb = '<div class="empty">No delivery problems found.</div>';
     out.push('<div id="a-mail" class="bigw">' + card("Message errors", "⚠️", "red", issues + (issues === 1 ? " issue" : " issues"), mb, m.bounces ? "Likely a bad client email address. Worth fixing the contact so reminders get through." : "") + '</div>');
+
+    var u = m.unread, ub = u.items.map(function (x) {
+      return row({ t: x.subject || "(no subject)", av: x.from || x.jobTitle, s: (x.from ? x.from + " · " : "") + (x.jobTitle || "") + (x.when ? " · " + shortDate(x.when.slice(0, 10)) : ""), href: x.href || jobHref(x.jobHref) });
+    }).join("") || '<div class="empty">No unread client email.</div>';
+    out.push('<div id="a-unread" class="bigw">' + card("Unread client email", "📨", "blue", u.count + " unread", ub, u.count > u.items.length ? "Showing the latest " + u.items.length + " of " + u.count + "." : "") + '</div>');
 
     $("attn").innerHTML = out.join("");
   }
@@ -787,7 +617,7 @@
       '<div class="cal-wrap"><div><div class="cal-head"><span class="mn">' + MONTHS[view.m] + ' ' + view.y + '</span>' +
       '<button class="nav" id="calprev" aria-label="Previous month"' + (atMin ? ' disabled' : '') + '>‹</button><button class="todaybtn" id="caltoday">Today</button><button class="nav" id="calnext" aria-label="Next month"' + (atMax ? ' disabled' : '') + '>›</button></div>' +
       '<div class="cal-grid">' + grid + '</div></div>' + panel + '</div>' +
-      '<div class="foot">Workspace events are ones created in Workspace; the calendar feed is what syncs in from your connected calendars. All times are shown in your studio timezone (' + tzLabel() + '). Tasks only count while their job is in the same stage as the task (' + D.tasks.other + ' for other stages are left out). Not shown here: ' + D.tasks.older + ' overdue from before ' + MONTHS[+D.cal.m0.slice(5, 7) - 1] + ' and ' + D.tasks.noDue + ' with no due date.</div>';
+      '<div class="foot">Workspace events are ones created in Workspace; the calendar feed is what syncs in from your connected calendars. Times are shown in each event’s own timezone. Tasks only count while their job is in the same stage as the task (' + D.tasks.other + ' for other stages are left out). Not shown here: ' + D.tasks.older + ' overdue from before ' + MONTHS[+D.cal.m0.slice(5, 7) - 1] + ' and ' + D.tasks.noDue + ' with no due date.</div>';
 
     $("calprev").onclick = function () { view.m--; if (view.m < 0) { view.m = 11; view.y--; } renderCal(); };
     $("calnext").onclick = function () { view.m++; if (view.m > 11) { view.m = 0; view.y++; } renderCal(); };
@@ -851,8 +681,11 @@
 
   function tzLabel() { return (D.studio && D.studio.tz) || "UTC"; }
   function renderFoot() {
-    var m = D.mail, total = m.of || m.jobs;
-    $("foot").innerHTML = '<div>Email counts cover ' + (m.jobs - m.errs) + ' of ' + total + ' active jobs' + (total > m.jobs ? ' (large accounts are capped at ' + m.jobs + ' to keep refreshes quick)' : '') + '.</div>';
+    var notes = [], failed = [];
+    D.errors.forEach(function (e) { if (failed.indexOf(e.section) < 0) failed.push(e.section); });
+    if (failed.length) notes.push("Couldn’t load " + failed.join(", ") + " this time, so those sections show as empty.");
+    if (D.events.hidden || D.tasks.hidden) notes.push("The calendar is showing the first 100 groups of events and tasks; open Workspace for the rest.");
+    $("foot").innerHTML = notes.map(function (n) { return '<div>' + esc(n) + '</div>'; }).join("");
   }
 
 
@@ -867,7 +700,6 @@
     $("welcome").hidden = true; $("content").hidden = false;
     CUR = (D.studio && D.studio.currency) || "USD";
     WS = (D.studio && D.studio.weekStartsOn === "Sunday") ? 0 : 1;
-    W = (D.studio && D.studio.app) || W;
     $("eyebrow").textContent = "Daily Dashboard" + (D.studio && D.studio.name ? " · " + D.studio.name : "");
     TODAY = D.today; TOMORROW = addDays(TODAY, 1);
     parseEvents();
@@ -904,13 +736,14 @@
       return window.claude.use("mcp");
     }).then(function (mcp) {
       if (!mcp) throw { code: "unavailable" };
-      return mcp.callTool(SERVER, "execute", { code: pullFn.toString() });
+      return mcp.callTool(SERVER, "get_attention_summary", { days: 62, from: windowStart() });
     }).then(function (res) {
       var p = res && res.payload;
+      if (p && p.content && p.content[0]) p = p.content[0].text;
       if (typeof p === "string") { try { p = JSON.parse(p); } catch (e) { p = null; } }
-      var data = p && p.today ? p : (p && p.result && p.result.today ? p.result : null);
-      if (!data || !data.tasks || !data.events) throw { code: "bad_shape" };
-      D = data; try { localStorage.setItem("ddash.data", JSON.stringify(D)); } catch (e) {} renderAll();
+      var data;
+      try { data = adapt(p); } catch (e) { throw { code: "bad_shape" }; }
+      D = data; try { localStorage.setItem(CACHE_KEY, JSON.stringify(D)); } catch (e) {} renderAll();
     }).catch(function (e) { toast(errMsg(e)); }).then(done, done);
   }
   $("refresh").addEventListener("click", refresh);
@@ -925,7 +758,7 @@
   }
 
   // Show the last data this browser loaded, if any
-  try { var cached = JSON.parse(localStorage.getItem("ddash.data") || "null"); if (cached && cached.today && cached.tasks && cached.events && cached.cal) D = cached; } catch (e) {}
+  try { var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); if (cached && cached.today && cached.tasks && cached.events && cached.cal) D = cached; } catch (e) {}
   renderAll();
 })();
 </script>
