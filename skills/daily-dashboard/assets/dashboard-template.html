@@ -368,6 +368,7 @@
   var SERVER = "VSCO MCP";
   var D = null;
   var CACHE_KEY = "ddash.data.v2";
+  var SECTION_LABELS = { taskLists: "task lists", "mail.drafts": "email drafts", "mail.queued": "queued email", "mail.bounced": "bounced email", "mail.unread": "unread email", studio: "studio settings" };
 
   function thisMonth() {
     var tz = (D && D.studio && D.studio.tz) || undefined, today;
@@ -382,7 +383,7 @@
     var invJob = function (j) { return { t: j.jobTitle, id: j.jobHref, n: j.count, bal: c(j.balance), oldest: j.oldestDueDate, due: j.nextDueDate }; };
     return {
       studio: { name: s.studio.name, currency: s.studio.currency, tz: s.studio.timezone, weekStartsOn: s.studio.weekStartsOn },
-      asOf: s.asOf, today: s.today, cal: { m0: s.today.slice(0, 7) }, errors: s.errors || [],
+      asOf: s.asOf, today: s.today, cal: { m0: s.today.slice(0, 7) }, errors: s.errors || [], truncated: s.truncated || [],
       tasks: { dueToday: t.dueToday.count, todayNames: names.slice(0, 3), overdue: t.overdue.count, older: t.overdue.beforeThisMonth, noDue: t.noDueDate, other: t.otherStage, hidden: t.inWindow.count - t.inWindow.items.length,
         rows: t.inWindow.items.map(function (r) { return [r.dueDate, r.name, r.jobTitle, r.jobHref, r.count]; }) },
       inv: { overdue: { n: iv.pastDue.count, total: c(iv.pastDue.total), jobsTotal: iv.pastDue.jobCount, oldest: iv.pastDue.oldestDueDate || "", jobs: iv.pastDue.jobs.map(invJob) },
@@ -450,9 +451,10 @@
   /* ---------- Events ---------- */
   function parseEvents() {
     EVENTS = []; EV_BY = {};
+    var first = D.cal.m0 + "-01";
     D.events.groups.forEach(function (g) {
       g.dates.forEach(function (date) {
-        var e = { k: g.source === "calendarFeed" ? "feed" : "ws", name: g.name, st: g.startTime || "", et: g.endTime || "", ad: g.allDay, job: g.jobHref || "", end: g.endDate || "", date: date };
+        var e = { k: g.source === "calendarFeed" ? "feed" : "ws", name: g.name, st: g.startTime || "", et: g.endTime || "", ad: g.allDay, job: g.jobHref || "", end: g.endDate || "", date: date < first ? first : date };
         EVENTS.push(e); (EV_BY[e.date] = EV_BY[e.date] || []).push(e);
       });
     });
@@ -672,9 +674,10 @@
 
   function tzLabel() { return (D.studio && D.studio.tz) || "UTC"; }
   function renderFoot() {
-    var notes = [], failed = [];
-    D.errors.forEach(function (e) { if (failed.indexOf(e.section) < 0) failed.push(e.section); });
+    var notes = [], failed = [], label = function (s) { return SECTION_LABELS[s] || s; };
+    D.errors.forEach(function (e) { if (failed.indexOf(label(e.section)) < 0) failed.push(label(e.section)); });
     if (failed.length) notes.push("Couldn’t load " + failed.join(", ") + " this time, so those sections show as empty.");
+    if (D.truncated.length) notes.push("Your studio has too many " + D.truncated.map(label).join(", ") + " to load in full, so those counts may be low.");
     if (D.events.hidden || D.tasks.hidden) notes.push("The calendar is showing the first 100 groups of events and tasks; open Workspace for the rest.");
     $("foot").innerHTML = notes.map(function (n) { return '<div>' + esc(n) + '</div>'; }).join("");
   }
