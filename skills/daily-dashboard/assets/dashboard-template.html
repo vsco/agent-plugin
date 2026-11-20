@@ -373,7 +373,7 @@
   function thisMonth() {
     var tz = (D && D.studio && D.studio.tz) || undefined, today;
     try { today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date()); } catch (e) { today = new Date().toISOString().slice(0, 10); }
-    return { from: today.slice(0, 7) + "-01", days: new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7), 0)).getUTCDate() };
+    return { from: today.slice(0, 7) + "-01", days: new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7), 0)).getUTCDate(), calendar: true };
   }
   function c(d) { return Math.round((d || 0) * 100); }
   function adapt(s) {

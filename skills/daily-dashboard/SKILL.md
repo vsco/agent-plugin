@@ -9,7 +9,7 @@ On hosts that cannot publish Claude artifacts with connector access (for example
 
 On Claude, this skill publishes a ready-made dashboard page from `assets/dashboard-template.html`. The page loads its own data: the viewer presses refresh, allows the connector once, and the page calls the VSCO connector's read-only `get_attention_summary` tool. Never embed real account data in the published page; it opens on a welcome screen by design.
 
-The page calls `get_attention_summary` with `from` set to the first of the current month and `days` set to the month's length, so the calendar covers the current month. `adapt()` in the template maps the tool's result onto the shape the render functions use. If a Claude user asks for a quick answer rather than a dashboard, answer in chat as above.
+The page calls `get_attention_summary` with `from` set to the first of the current month and `days` set to the month's length, so the calendar covers the current month, and `calendar: true` so it gets up to 100 event and dated-task groups rather than the top few. `adapt()` in the template maps the tool's result onto the shape the render functions use. If a Claude user asks for a quick answer rather than a dashboard, answer in chat as above.
 
 ## Steps (Claude artifacts)
 
