@@ -15,7 +15,7 @@
                 "developerName": "Visual Supply Company",
                 "category": "Productivity",
                 "capabilities": ["Read", "Write"],
-                "defaultPrompt": ["Show me my open leads in VSCO", "Show me my open invoices in VSCO"],
+                "defaultPrompt": ["What needs my attention today in VSCO?", "Show me my open leads in VSCO", "Show me my open invoices in VSCO"],
                 "websiteURL": "https://www.vsco.co/",
                 "privacyPolicyURL": "https://www.vsco.co/about/privacy-policy",
                 "termsOfServiceURL": "https://www.vsco.co/about/terms-of-use",
