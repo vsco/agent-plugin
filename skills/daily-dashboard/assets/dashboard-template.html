@@ -188,9 +188,6 @@
   @media (max-width: 900px) { .cal-wrap { grid-template-columns: minmax(0, 1fr); } }
   .cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .cal-head .mn { font-family: var(--serif); font-size: 20px; font-weight: 600; margin-right: auto; }
-  .nav { font: inherit; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
-  .nav:hover:not(:disabled) { background: var(--soft); }
-  .nav:disabled { opacity: .35; cursor: default; }
   .todaybtn { font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
   .todaybtn:hover { background: var(--soft); }
   .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -372,12 +369,11 @@
   var D = null;
   var CACHE_KEY = "ddash.data.v2";
 
-  function windowStart() {
+  function thisMonth() {
     var tz = (D && D.studio && D.studio.tz) || undefined, today;
     try { today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date()); } catch (e) { today = new Date().toISOString().slice(0, 10); }
-    return today.slice(0, 7) + "-01";
+    return { from: today.slice(0, 7) + "-01", days: new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7), 0)).getUTCDate() };
   }
-  function nextMonth(ym) { var y = +ym.slice(0, 4), m = +ym.slice(5, 7); return m === 12 ? (y + 1) + "-01" : y + "-" + (m < 9 ? "0" : "") + (m + 1); }
   function c(d) { return Math.round((d || 0) * 100); }
   function adapt(s) {
     var t = s.tasks, iv = s.invoices, q = s.quotes, m = s.mail, b = s.booked, l = s.leads;
@@ -386,7 +382,7 @@
     var invJob = function (j) { return { t: j.jobTitle, id: j.jobHref, n: j.count, bal: c(j.balance), oldest: j.oldestDueDate, due: j.nextDueDate }; };
     return {
       studio: { name: s.studio.name, currency: s.studio.currency, tz: s.studio.timezone, weekStartsOn: s.studio.weekStartsOn },
-      asOf: s.asOf, today: s.today, cal: { m0: s.today.slice(0, 7), m1: nextMonth(s.today.slice(0, 7)) }, errors: s.errors || [],
+      asOf: s.asOf, today: s.today, cal: { m0: s.today.slice(0, 7) }, errors: s.errors || [],
       tasks: { dueToday: t.dueToday.count, todayNames: names.slice(0, 3), overdue: t.overdue.count, older: t.overdue.beforeThisMonth, noDue: t.noDueDate, other: t.otherStage, hidden: t.inWindow.count - t.inWindow.items.length,
         rows: t.inWindow.items.map(function (r) { return [r.dueDate, r.name, r.jobTitle, r.jobHref, r.count]; }) },
       inv: { overdue: { n: iv.pastDue.count, total: c(iv.pastDue.total), jobsTotal: iv.pastDue.jobCount, oldest: iv.pastDue.oldestDueDate || "", jobs: iv.pastDue.jobs.map(invJob) },
@@ -410,7 +406,7 @@
   var DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  var WS = 1, TODAY = "", TOMORROW = "", EVENTS = [], EV_BY = {}, view = null, sel = null, MIN = null, MAX = null, busy = false;
+  var WS = 1, TODAY = "", TOMORROW = "", EVENTS = [], EV_BY = {}, view = null, sel = null, busy = false;
   var SRC = { tasks: true, ws: true, feed: true };
   var SRC_META = { tasks: { label: "Tasks", cls: "amber" }, ws: { label: "Workspace events", cls: "teal" }, feed: { label: "Calendar feed", cls: "violet" } };
   var agFilter = "all";
@@ -562,8 +558,6 @@
     };
   }
   function sumN(arr) { return arr.reduce(function (s, g) { return s + g.n; }, 0); }
-  function idx(v) { return v.y * 12 + v.m; }
-
   function renderCal() {
     var first = new Date(Date.UTC(view.y, view.m, 1)), lead = (first.getUTCDay() - WS + 7) % 7;
     var dim = new Date(Date.UTC(view.y, view.m + 1, 0)).getUTCDate();
@@ -577,7 +571,6 @@
       ws: EVENTS.filter(function (e) { return e.k === "ws" && e.date.indexOf(prefix) === 0; }).length,
       feed: EVENTS.filter(function (e) { return e.k === "feed" && e.date.indexOf(prefix) === 0; }).length
     };
-    var atMin = idx(view) <= idx(MIN), atMax = idx(view) >= idx(MAX);
     var togs = ["tasks", "ws", "feed"].map(function (s) {
       return '<button class="tog ' + SRC_META[s].cls + '" data-s="' + s + '" aria-pressed="' + SRC[s] + '"><i class="sd"></i>' + SRC_META[s].label + ' <b>' + counts[s] + '</b></button>';
     }).join("");
@@ -615,12 +608,10 @@
       '<h3><span class="ico" style="--ibg:var(--blue-bg);--ic:var(--blue)">📅</span>Calendar</h3>' +
       '<div class="togs" role="group" aria-label="Choose what to show">' + togs + '</div>' +
       '<div class="cal-wrap"><div><div class="cal-head"><span class="mn">' + MONTHS[view.m] + ' ' + view.y + '</span>' +
-      '<button class="nav" id="calprev" aria-label="Previous month"' + (atMin ? ' disabled' : '') + '>‹</button><button class="todaybtn" id="caltoday">Today</button><button class="nav" id="calnext" aria-label="Next month"' + (atMax ? ' disabled' : '') + '>›</button></div>' +
+      '<button class="todaybtn" id="caltoday">Today</button></div>' +
       '<div class="cal-grid">' + grid + '</div></div>' + panel + '</div>' +
       '<div class="foot">Workspace events are ones created in Workspace; the calendar feed is what syncs in from your connected calendars. Times are shown in each event’s own timezone. Tasks only count while their job is in the same stage as the task (' + D.tasks.other + ' for other stages are left out). Not shown here: ' + D.tasks.older + ' overdue from before ' + MONTHS[+D.cal.m0.slice(5, 7) - 1] + ' and ' + D.tasks.noDue + ' with no due date.</div>';
 
-    $("calprev").onclick = function () { view.m--; if (view.m < 0) { view.m = 11; view.y--; } renderCal(); };
-    $("calnext").onclick = function () { view.m++; if (view.m > 11) { view.m = 0; view.y++; } renderCal(); };
     $("caltoday").onclick = function () { view = { y: +D.cal.m0.slice(0, 4), m: +D.cal.m0.slice(5, 7) - 1 }; sel = TODAY; renderCal(); };
     document.querySelectorAll(".cd[data-d]").forEach(function (b) { b.onclick = function () { sel = b.getAttribute("data-d"); renderCal(); }; });
     document.querySelectorAll(".tog").forEach(function (b) { b.onclick = function () { var s = b.getAttribute("data-s"); SRC[s] = !SRC[s]; renderCal(); }; });
@@ -703,10 +694,8 @@
     $("eyebrow").textContent = "Daily Dashboard" + (D.studio && D.studio.name ? " · " + D.studio.name : "");
     TODAY = D.today; TOMORROW = addDays(TODAY, 1);
     parseEvents();
-    var y0 = +D.cal.m0.slice(0, 4), m0 = +D.cal.m0.slice(5, 7) - 1, y1 = +D.cal.m1.slice(0, 4), m1 = +D.cal.m1.slice(5, 7) - 1;
-    MIN = { y: y0, m: m0 }; MAX = { y: y1, m: m1 };
-    if (!view || idx(view) < idx(MIN) || idx(view) > idx(MAX)) view = { y: y0, m: m0 };
-    if (!sel || sel.slice(0, 7) < D.cal.m0 || sel.slice(0, 7) > D.cal.m1) sel = TODAY;
+    view = { y: +D.cal.m0.slice(0, 4), m: +D.cal.m0.slice(5, 7) - 1 };
+    if (!sel || sel.slice(0, 7) !== D.cal.m0) sel = TODAY;
     $("title").textContent = DOW[dow(TODAY)] + " " + (+TODAY.slice(8, 10)) + " " + MONTHS[+TODAY.slice(5, 7) - 1] + " " + TODAY.slice(0, 4);
     renderKpis(); renderAttn(); renderCal(); renderBooked(); renderLeads(); renderFoot(); updateRefreshTitle(); updateStale();
   }
@@ -736,7 +725,7 @@
       return window.claude.use("mcp");
     }).then(function (mcp) {
       if (!mcp) throw { code: "unavailable" };
-      return mcp.callTool(SERVER, "get_attention_summary", { days: 62, from: windowStart() });
+      return mcp.callTool(SERVER, "get_attention_summary", thisMonth());
     }).then(function (res) {
       var p = res && res.payload;
       if (p && p.content && p.content[0]) p = p.content[0].text;

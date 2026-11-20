@@ -7,11 +7,11 @@ description: Build or refresh a VSCO Workspace daily dashboard (tasks, invoices,
 
 Publishes a ready-made dashboard page from `assets/dashboard-template.html`. The page loads its own data: the viewer presses refresh, allows the connector once, and the page calls the VSCO connector's read-only `get_attention_summary` tool. Never embed real account data in the published page; it opens on a welcome screen by design.
 
-The page calls `get_attention_summary` with `days: 62` and `from` set to the first of the current month, so the calendar covers this month and next. `adapt()` in the template maps the tool's result onto the shape the render functions use. To answer in chat instead of publishing a page, call `get_attention_summary` directly; its default 14-day window fits a chat answer.
+The page calls `get_attention_summary` with `from` set to the first of the current month and `days` set to the month's length, so the calendar covers the current month. `adapt()` in the template maps the tool's result onto the shape the render functions use. To answer in chat instead of publishing a page, call `get_attention_summary` directly; its default 14-day window fits a chat answer.
 
 ## Steps
 
-1. Test the tool first. Call `get_attention_summary` once with `{ "days": 62 }`. If the connector has no such tool, it is out of date; stop and tell the user. If the result has an `errors` list, mention which sections failed.
+1. Test the tool first. Call `get_attention_summary` once with no arguments. If the connector has no such tool, it is out of date; stop and tell the user. If the result has an `errors` list, mention which sections failed.
 2. Copy the template to a working file. Do not edit the original.
 3. Set `SERVER` at the top of the script to the VSCO connector's exact display name, as it appears in the user's connector list. `mcp.callTool(SERVER, "get_attention_summary", ...)` and the artifact's `capabilities` must use the same name.
 4. Publish it as an artifact with `capabilities: {"mcp": {"servers": [{"server": "<display name>", "tools": ["get_attention_summary"]}]}}`. Write page content only (title, link, style, body); the publisher adds the html/head/body skeleton.
