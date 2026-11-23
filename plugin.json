@@ -1,7 +1,7 @@
 {
     "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
     "name": "vsco-mcp",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "Connect your VSCO account through the official VSCO MCP service. Requires a VSCO One subscription.",
     "author": { "name": "Visual Supply Company" },
     "homepage": "https://www.vsco.co/",
@@ -15,7 +15,7 @@
                 "developerName": "Visual Supply Company",
                 "category": "Productivity",
                 "capabilities": ["Read", "Write"],
-                "defaultPrompt": ["What needs my attention today in VSCO?", "Show me my open leads in VSCO", "Show me my open invoices in VSCO"],
+                "defaultPrompt": ["Show my VSCO daily dashboard", "What needs my attention today in VSCO?", "Show me my open leads in VSCO", "Show me my open invoices in VSCO"],
                 "websiteURL": "https://www.vsco.co/",
                 "privacyPolicyURL": "https://www.vsco.co/about/privacy-policy",
                 "termsOfServiceURL": "https://www.vsco.co/about/terms-of-use",
