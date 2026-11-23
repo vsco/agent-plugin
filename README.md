@@ -1,6 +1,6 @@
-# VSCO MCP plugin
+# VSCO plugin
 
-Connects Claude, ChatGPT and other agent-plugin compatible clients to VSCO's MCP service, giving access to the tools available to your authorized VSCO account (initially VSCO Workspace). Requires a VSCO One subscription. Authorization happens through OAuth when the client first connects.
+Connects Claude, ChatGPT and other agent-plugin compatible clients to VSCO, giving access to the tools available to your authorized VSCO account (initially VSCO Workspace). Requires a VSCO One subscription. Authorization happens through OAuth when the client first connects.
 
 ## Support
 
@@ -17,7 +17,6 @@ This repository is a single plugin with the plugin at the repository root.
 | `.mcp.json` | Claude MCP server configuration |
 | `plugin.json` | Agent Plugins manifest |
 | `mcp.json` | Agent Plugins MCP server configuration |
-| `icon.png` | Plugin icon |
 | `skills/<name>/SKILL.md` | Skills, shared by both manifests. Split by workflow (for example leads, invoices, payments), not by tool. |
 
 The `version` in `plugin.json` and `.claude-plugin/plugin.json` must match.

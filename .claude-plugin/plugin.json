@@ -1,8 +1,8 @@
 {
-    "name": "vsco-mcp",
+    "name": "vsco",
     "displayName": "VSCO",
-    "version": "0.4.0",
-    "description": "Connect Claude to the VSCO MCP service with your authorized VSCO account. Available tools depend on your permissions. Requires a VSCO One subscription.",
+    "version": "0.5.0",
+    "description": "Connect Claude to VSCO with your authorized VSCO account. Available tools depend on your permissions. Requires a VSCO One subscription.",
     "author": { "name": "Visual Supply Company", "url": "https://vsco.co" },
     "homepage": "https://vsco.co",
     "repository": "https://github.com/vsco/agent-plugin",
