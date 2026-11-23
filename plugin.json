@@ -1,8 +1,8 @@
 {
     "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-    "name": "vsco-mcp",
-    "version": "0.4.0",
-    "description": "Connect your VSCO account through the official VSCO MCP service. Requires a VSCO One subscription.",
+    "name": "vsco",
+    "version": "0.5.0",
+    "description": "Connect your VSCO account through the official VSCO integration. Requires a VSCO One subscription.",
     "author": { "name": "Visual Supply Company" },
     "homepage": "https://www.vsco.co/",
     "keywords": ["photo", "photographer", "photography", "crm", "vsco", "invoice", "leads", "workflow", "payments"],
@@ -11,7 +11,7 @@
             "interface": {
                 "displayName": "VSCO",
                 "shortDescription": "Connect your VSCO account",
-                "longDescription": "Connect your authorized VSCO account to ChatGPT using the VSCO MCP service. Ask about information and take supported actions in VSCO products, subject to your account permissions, entitlements, and the tools made available by VSCO. Currently supported workflows include checking open leads and invoices. Available functionality may expand across VSCO products. Requires a VSCO One subscription. Review proposed changes before approving actions that modify your account.",
+                "longDescription": "Connect your authorized VSCO account to ChatGPT using VSCO's official integration. Ask about information and take supported actions in VSCO products, subject to your account permissions, entitlements, and the tools made available by VSCO. Currently supported workflows include checking open leads and invoices. Available functionality may expand across VSCO products. Requires a VSCO One subscription. Review proposed changes before approving actions that modify your account.",
                 "developerName": "Visual Supply Company",
                 "category": "Productivity",
                 "capabilities": ["Read", "Write"],
@@ -24,7 +24,7 @@
                 "logo": "./icon.png"
             },
             "publication": {
-                "release_notes": "Updated VSCO-wide branding, clarified the integration description, and retained the VSCO MCP OAuth connection."
+                "release_notes": "Renamed the plugin to VSCO."
             }
         }
     }
