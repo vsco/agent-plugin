@@ -1,7 +1,7 @@
 {
     "name": "vsco",
     "displayName": "VSCO",
-    "version": "0.5.0",
+    "version": "0.5.2",
     "description": "Connect Claude to VSCO with your authorized VSCO account. Available tools depend on your permissions. Requires a VSCO One subscription.",
     "author": { "name": "Visual Supply Company", "url": "https://vsco.co" },
     "homepage": "https://vsco.co",
