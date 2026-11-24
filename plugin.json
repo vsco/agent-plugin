@@ -2,7 +2,7 @@
     "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
     "name": "vsco",
     "version": "0.5.2",
-    "description": "Connect your existing VSCO account. Access follows the VSCO One plan on that account.",
+    "description": "Connect your existing VSCO account. Requires a VSCO account with VSCO One.",
     "author": { "name": "Visual Supply Company" },
     "homepage": "https://www.vsco.co/",
     "keywords": ["photo", "photographer", "photography", "crm", "vsco", "invoice", "leads", "workflow", "payments"],
@@ -11,7 +11,7 @@
             "interface": {
                 "displayName": "VSCO",
                 "shortDescription": "Connect your VSCO account",
-                "longDescription": "Connect your VSCO account to see a daily dashboard of tasks, bookings, invoices, and unread client email; check open leads and invoices; and look up jobs, contacts, and calendar events. When you ask, it can also make supported changes, such as adding a contact. What you can see and change follows your VSCO account permissions. Sign-in uses your existing VSCO account, and access follows the VSCO One plan on that account.",
+                "longDescription": "Connect your VSCO account to see a daily dashboard of tasks, bookings, invoices, and unread client email; check open leads and invoices; and look up jobs, contacts, and calendar events. When you ask, it can also make supported changes, such as adding a contact. What you can see and change follows your VSCO account permissions. Requires a VSCO account with VSCO One.",
                 "developerName": "Visual Supply Company",
                 "category": "Productivity",
                 "capabilities": ["Read", "Write"],
